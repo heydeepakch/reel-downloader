@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"os"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -199,9 +200,10 @@ func reelHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	http.HandleFunc("/api/reel", cors(reelHandler))
-	fs := http.FileServer(http.Dir("../frontend"))
-	http.Handle("/", http.StripPrefix("/", fs))
-
-	println("Server running on http://localhost:8080")
-	http.ListenAndServe(":8080", nil)
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	println("Server running on :" + port)
+	http.ListenAndServe(":"+port, nil)
 }
