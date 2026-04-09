@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"time"
 )
 
 const (
@@ -49,7 +50,7 @@ func extractShortcode(inputURL string) string {
 	return m[1]
 }
 
-func extractViaGraphQL(shortcode string) (string, error) {
+func extractViaGraphQLOnce(shortcode string) (string, error) {
 	jar, _ := cookiejar.New(nil)
 	client := &http.Client{Jar: jar}
 
@@ -74,7 +75,6 @@ func extractViaGraphQL(shortcode string) (string, error) {
 	if csrf == "" {
 		csrf = "missing"
 	}
-
 
 	variables := `{"shortcode":"` + shortcode + `"}`
 	form := url.Values{}
@@ -115,6 +115,19 @@ func extractViaGraphQL(shortcode string) (string, error) {
 		return "", nil
 	}
 	return items[0].VideoVersions[0].URL, nil
+}
+
+// extractViaGraphQL retries once: Instagram often returns empty items intermittently; refresh does not help that.
+func extractViaGraphQL(shortcode string) (string, error) {
+	v, err := extractViaGraphQLOnce(shortcode)
+	if err != nil {
+		return "", err
+	}
+	if v != "" {
+		return v, nil
+	}
+	time.Sleep(500 * time.Millisecond)
+	return extractViaGraphQLOnce(shortcode)
 }
 
 func extractViaRegex(body []byte) string {
@@ -195,6 +208,7 @@ func reelHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
 	json.NewEncoder(w).Encode(Response{VideoURL: videoURL})
 }
 

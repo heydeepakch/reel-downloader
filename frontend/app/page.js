@@ -27,8 +27,10 @@ export default function Home() {
     setShowPreview(false);
 
     try {
-      const apiUrl = `${API_BASE}/api/reel?url=${encodeURIComponent(raw)}`;
-      const res = await fetch(apiUrl);
+      // Unique URL every click so disk cache cannot reuse JSON across sessions/refreshes (ignored by API).
+      const apiUrl = `${API_BASE}/api/reel?url=${encodeURIComponent(raw)}&_cb=${Date.now()}`;
+      // Instagram CDN URLs expire; avoid any cached API response reusing a dead video_url.
+      const res = await fetch(apiUrl, { cache: "no-store" });
       const data = await res.json();
 
       if (!res.ok) {
@@ -53,7 +55,7 @@ export default function Home() {
     if (!videoUrl) return;
     setDownloading(true);
     try {
-      const res = await fetch(videoUrl);
+      const res = await fetch(videoUrl, { cache: "no-store" });
       const blob = await res.blob();
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
